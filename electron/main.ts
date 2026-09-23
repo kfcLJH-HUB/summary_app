@@ -1,10 +1,10 @@
-import { app, BrowserWindow, dialog, ipcMain, WebContentsView } from "electron"
-import { existsSync, readFileSync, writeFileSync } from "node:fs"
+import { app, BrowserWindow, dialog, ipcMain, session, WebContentsView } from "electron"
+import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { randomUUID } from "node:crypto"
 import { readCodexSessions } from "../core/codex-reader"
 import { readClaudeSessions } from "../core/claude-reader"
-import { generateDailySummary } from "../core/summarizer"
+import { DEFAULT_SUMMARY_PROMPT, generateDailySummary } from "../core/summarizer"
 import { defaultOutputPath, writeSummaryMarkdown } from "../core/markdown-writer"
 import { normalizeConversations } from "../core/normalizer"
 import type { AppSettings, DailySummary } from "../core/types"
@@ -13,8 +13,17 @@ let mainWindow: BrowserWindow | null = null
 let doubaoView: WebContentsView | null = null
 let doubaoReady: Promise<void> | null = null
 const doubaoRequests = new Map<string, (result: any) => void>()
+const DOUBAO_PARTITION = "persist:doubao-summary"
+const DOUBAO_AUTH_COOKIES = new Set([
+  "sessionid",
+  "sessionid_ss",
+  "sessionid_sign",
+  "sid_guard",
+  "uid_tt",
+  "uid_tt_ss",
+])
 
-function settingsPath() { return join(app.getPath("userData"), "settings.json") }
+function settingsPath(fileName = ".settings.json") { return join(app.getPath("userData"), fileName) }
 function defaultSettings(): AppSettings {
   const home = app.getPath("home")
   return {
@@ -23,20 +32,28 @@ function defaultSettings(): AppSettings {
     outputPath: join(home, "Documents", "AI-Daily-Summaries"),
     apiBaseUrl: "https://api.openai.com",
     apiKey: "",
-    model: "gpt-4o-mini"
+    model: "gpt-4o-mini",
+    summaryPrompt: DEFAULT_SUMMARY_PROMPT,
   }
 }
 function loadSettings(): AppSettings {
   const defaults = defaultSettings()
-  try { return { ...defaults, ...(JSON.parse(readFileSync(settingsPath(), "utf8")) as Partial<AppSettings>) } } catch { return defaults }
+  for (const path of [settingsPath(), settingsPath("settings.json")]) {
+    try { return { ...defaults, ...(JSON.parse(readFileSync(path, "utf8")) as Partial<AppSettings>) } } catch { /* Try the next compatible location. */ }
+  }
+  return defaults
 }
-function saveSettings(settings: AppSettings) { writeFileSync(settingsPath(), JSON.stringify(settings, null, 2), "utf8") }
+function saveSettings(settings: AppSettings) {
+  const path = settingsPath()
+  writeFileSync(path, JSON.stringify(settings, null, 2), { encoding: "utf8", mode: 0o600 })
+  chmodSync(path, 0o600)
+}
 
 function bounds() {
   if (!mainWindow) return
   const { width, height } = mainWindow.getContentBounds()
-  const sidebar = 224
-  doubaoView?.setBounds({ x: sidebar, y: 54, width: Math.max(0, width - sidebar), height: Math.max(0, height - 54) })
+  const headerHeight = 140
+  doubaoView?.setBounds({ x: 0, y: headerHeight, width, height: Math.max(0, height - headerHeight) })
 }
 
 function setDoubaoVisible(visible: boolean) {
@@ -46,7 +63,7 @@ function setDoubaoVisible(visible: boolean) {
 
 function createDoubaoView() {
   if (doubaoView) return doubaoView
-  doubaoView = new WebContentsView({ webPreferences: { partition: "persist:doubao-summary", preload: join(__dirname, "doubao-preload.js"), nodeIntegration: false, contextIsolation: true, sandbox: true } })
+  doubaoView = new WebContentsView({ webPreferences: { partition: DOUBAO_PARTITION, preload: join(__dirname, "doubao-preload.js"), nodeIntegration: false, contextIsolation: true, sandbox: true } })
   mainWindow?.contentView.addChildView(doubaoView)
   doubaoReady = new Promise<void>((resolve) => {
     const handleLoaded = () => {
@@ -65,7 +82,7 @@ function createDoubaoView() {
 }
 
 async function createWindow() {
-  mainWindow = new BrowserWindow({ width: 1440, height: 900, minWidth: 1100, minHeight: 700, title: "AI Session Summary", backgroundColor: "#f7f7f4", webPreferences: { preload: join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, sandbox: true } })
+  mainWindow = new BrowserWindow({ width: 900, height: 640, minWidth: 760, minHeight: 520, title: "AI Session Summary", backgroundColor: "#f7f7f4", webPreferences: { preload: join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, sandbox: true } })
   const rendererUrl = process.env.ELECTRON_RENDERER_URL
   if (rendererUrl) await mainWindow.loadURL(rendererUrl)
   else await mainWindow.loadFile(join(__dirname, "../dist/index.html"))
@@ -87,13 +104,22 @@ ipcMain.handle("doubao:hide", () => setDoubaoVisible(false))
 ipcMain.handle("doubao:read", async (_event, date: string) => {
   const view = createDoubaoView()
   await (doubaoReady ?? Promise.resolve())
+  const cookies = await session.fromPartition(DOUBAO_PARTITION).cookies.get({ url: "https://www.doubao.com" })
+  if (!cookies.some((cookie) => DOUBAO_AUTH_COOKIES.has(cookie.name) && cookie.value)) {
+    return {
+      conversations: [],
+      connected: false,
+      needsLogin: true,
+      error: "首次使用豆包，请先在打开的页面登录；登录后点击“返回日报”。",
+    }
+  }
   const requestId = randomUUID()
   const result = new Promise<any>((resolve) => {
     doubaoRequests.set(requestId, resolve)
     setTimeout(() => {
       if (!doubaoRequests.has(requestId)) return
       doubaoRequests.delete(requestId)
-      resolve({ conversations: [], error: "豆包读取超时，请确认已登录并打开豆包页面。" })
+      resolve({ conversations: [], connected: false, error: "豆包连接超时，请检查网络或登录状态。" })
     }, 60_000)
   })
   // The preload listener is installed before did-finish-load, so this send is

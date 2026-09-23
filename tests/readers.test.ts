@@ -2,7 +2,8 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { parseCodexFile } from "../core/codex-reader"
+import { normalizeConversations } from "../core/normalizer"
+import { parseCodexFile, readCodexSessionTitles, readCodexSessions } from "../core/codex-reader"
 import { parseClaudeFile } from "../core/claude-reader"
 
 const tempDirectories: string[] = []
@@ -23,17 +24,67 @@ describe("Codex reader", () => {
     expect(result?.sessionId).toBe("s1")
     expect(result?.messages.map((message) => message.content)).toEqual(["Fix the bug", "I fixed it."])
   })
+
+  it("keeps the first message of the selected date when a session is split across files", () => {
+    const dir = makeDir()
+    const earlierFile = join(dir, "rollout-earlier.jsonl")
+    const laterFile = join(dir, "rollout-later.jsonl")
+    const record = (timestamp: string, role: "user" | "assistant", text: string) => JSON.stringify({
+      type: "response_item",
+      timestamp,
+      payload: { type: "message", role, content: [{ type: role === "user" ? "input_text" : "output_text", text }] },
+    })
+    writeFileSync(earlierFile, [
+      JSON.stringify({ type: "session_meta", payload: { id: "split-session" } }),
+      record("2026-09-22T15:50:00Z", "user", "昨天的消息"),
+      record("2026-09-23T02:27:05Z", "user", "今天第一条"),
+      record("2026-09-23T02:27:10Z", "assistant", "第一条回复"),
+    ].join("\n"))
+    writeFileSync(laterFile, [
+      JSON.stringify({ type: "session_meta", payload: { id: "split-session" } }),
+      record("2026-09-23T03:57:25Z", "user", "之后的消息"),
+      record("2026-09-23T03:57:33Z", "assistant", "之后的回复"),
+    ].join("\n"))
+
+    const result = normalizeConversations(readCodexSessions([dir], "2026-09-23"))
+
+    expect(result).toHaveLength(1)
+    expect(result[0].messages.map((message) => message.content)).toEqual([
+      "今天第一条",
+      "第一条回复",
+      "之后的消息",
+      "之后的回复",
+    ])
+    expect(result[0].messages.every((message) => message.timestamp?.startsWith("2026-09-23"))).toBe(true)
+  })
+
+  it("uses the Codex session index title instead of the first message", () => {
+    const dir = makeDir()
+    const file = join(dir, "rollout.jsonl")
+    const index = join(dir, "session_index.jsonl")
+    writeFileSync(file, [
+      JSON.stringify({ type: "session_meta", payload: { id: "titled-session" } }),
+      JSON.stringify({ type: "response_item", timestamp: `${date}T09:01:00Z`, payload: { type: "message", role: "user", content: [{ type: "input_text", text: "第一条用户消息" }] } }),
+    ].join("\n"))
+    writeFileSync(index, JSON.stringify({ id: "titled-session", thread_name: "分析 VESTI 应用监听支持" }))
+
+    const result = parseCodexFile(file, date, readCodexSessionTitles(index))
+
+    expect(result?.title).toBe("分析 VESTI 应用监听支持")
+  })
 })
 
 describe("Claude Code reader", () => {
   it("keeps text blocks and ignores thinking", () => {
     const dir = makeDir(); const file = join(dir, "session.jsonl")
     writeFileSync(file, [
+      JSON.stringify({ type: "ai-title", aiTitle: "Claude 原生会话标题", sessionId: "c1" }),
       JSON.stringify({ type: "user", sessionId: "c1", cwd: "/tmp/project", timestamp: `${date}T10:00:00Z`, message: { role: "user", content: "Build a report" } }),
       JSON.stringify({ type: "assistant", sessionId: "c1", timestamp: `${date}T10:01:00Z`, message: { role: "assistant", content: [{ type: "thinking", thinking: "hidden" }, { type: "text", text: "Done" }] } })
     ].join("\n"))
     const result = parseClaudeFile(file, date)
     expect(result?.messages.map((message) => message.content)).toEqual(["Build a report", "Done"])
+    expect(result?.title).toBe("Claude 原生会话标题")
   })
 })
 

@@ -6,6 +6,7 @@ import { cleanText, isSameLocalDate, safeJsonParse, walkJsonl } from "./utils"
 type ContentBlock = { type?: string; text?: string; name?: string; input?: Record<string, unknown> }
 type ClaudeRecord = {
   type?: string
+  aiTitle?: string
   sessionId?: string
   timestamp?: string
   cwd?: string
@@ -42,6 +43,7 @@ export function parseClaudeFile(filePath: string, date: string): Conversation | 
     if (!raw || typeof raw !== "object") continue
     if (raw.sessionId) sessionId = raw.sessionId
     if (raw.cwd && !projectPath) projectPath = raw.cwd
+    if (raw.type === "ai-title" && raw.aiTitle?.trim()) title = raw.aiTitle.trim()
     if (raw.timestamp) { startedAt ??= raw.timestamp; endedAt = raw.timestamp }
     const role = raw.message?.role === "user" ? "user" : raw.message?.role === "assistant" ? "assistant" : null
     if (!role || !isSameLocalDate(raw.timestamp, date)) continue

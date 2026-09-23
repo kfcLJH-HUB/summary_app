@@ -24,18 +24,15 @@ export type SummaryOptions = {
   apiBaseUrl: string
   apiKey: string
   model: string
+  summaryPrompt?: string
   language?: string
   maxCharacters?: number
 }
 
 export type DailySummary = {
   date: string
-  headline: string
-  overview: string
   accomplishments: string[]
-  decisions: string[]
-  problems: string[]
-  openQuestions: string[]
+  knowledgeAbsorbed: string[]
   tomorrow: string[]
   sourceBreakdown: Record<Source, number>
   markdown: string
@@ -48,10 +45,13 @@ export type AppSettings = {
   apiBaseUrl: string
   apiKey: string
   model: string
+  summaryPrompt: string
 }
 
 export type DoubaoReadResult = {
   conversations: Conversation[]
+  connected: boolean
+  needsLogin?: boolean
   error?: string
 }
 

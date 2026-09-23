@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs"
-import { basename } from "node:path"
+import { homedir } from "node:os"
+import { basename, join } from "node:path"
 import type { Conversation, Message } from "./types"
 import { cleanText, isSameLocalDate, safeJsonParse, walkJsonl } from "./utils"
 
@@ -16,6 +17,22 @@ type CodexRecord = {
     name?: string
     arguments?: string
   }
+}
+
+type CodexSessionIndexEntry = {
+  id?: string
+  thread_name?: string
+}
+
+export function readCodexSessionTitles(indexPath = join(process.env.CODEX_HOME || join(homedir(), ".codex"), "session_index.jsonl")): Map<string, string> {
+  const titles = new Map<string, string>()
+  let lines: string[]
+  try { lines = readFileSync(indexPath, "utf8").split(/\r?\n/) } catch { return titles }
+  for (const line of lines) {
+    const entry = safeJsonParse(line) as CodexSessionIndexEntry | undefined
+    if (entry?.id && entry.thread_name?.trim()) titles.set(entry.id, entry.thread_name.trim())
+  }
+  return titles
 }
 
 function contentText(content: unknown, role: "user" | "assistant"): string {
@@ -42,7 +59,7 @@ function recordMessage(record: CodexRecord): { role: "user" | "assistant"; text:
   return text ? { role, text } : null
 }
 
-export function parseCodexFile(filePath: string, date: string): Conversation | null {
+export function parseCodexFile(filePath: string, date: string, sessionTitles: ReadonlyMap<string, string> = new Map()): Conversation | null {
   let lines: string[]
   try { lines = readFileSync(filePath, "utf8").split(/\r?\n/).filter(Boolean) } catch { return null }
   const messages: Message[] = []
@@ -53,7 +70,7 @@ export function parseCodexFile(filePath: string, date: string): Conversation | n
   let title = "Codex session"
   const seen = new Set<string>()
 
-  for (const line of lines) {
+  for (const [lineNumber, line] of lines.entries()) {
     const raw = safeJsonParse(line) as CodexRecord | undefined
     if (!raw || typeof raw !== "object") continue
     const timestamp = raw.timestamp
@@ -71,13 +88,14 @@ export function parseCodexFile(filePath: string, date: string): Conversation | n
     if (seen.has(key)) continue
     seen.add(key)
     if (title === "Codex session" && parsed.role === "user") title = parsed.text.split("\n")[0].slice(0, 100)
-    messages.push({ id: `${sessionId}-${messages.length}`, role: parsed.role, content: parsed.text, timestamp })
+    messages.push({ id: `${sessionId}-${filePath}-${lineNumber}`, role: parsed.role, content: parsed.text, timestamp })
   }
   if (messages.length === 0) return null
-  return { source: "codex", sessionId, title, projectPath, startedAt, endedAt, messages, sourcePath: filePath }
+  return { source: "codex", sessionId, title: sessionTitles.get(sessionId) ?? title, projectPath, startedAt, endedAt, messages, sourcePath: filePath }
 }
 
 export function readCodexSessions(paths: string[], date: string): Conversation[] {
   const files = [...new Set(paths.flatMap(walkJsonl))]
-  return files.map((file) => parseCodexFile(file, date)).filter((item): item is Conversation => Boolean(item))
+  const sessionTitles = readCodexSessionTitles()
+  return files.map((file) => parseCodexFile(file, date, sessionTitles)).filter((item): item is Conversation => Boolean(item))
 }

@@ -253,6 +253,7 @@ async function fetchConversation(ref: ConversationRef, date: string) {
 }
 
 async function readHistory(date: string) {
+  let connected = false
   try {
     const refs: ConversationRef[] = []
     const seenConversations = new Set<string>()
@@ -283,6 +284,10 @@ async function readHistory(date: string) {
           only_archive: false,
         },
       })
+      if (!body || !Array.isArray(body.cells)) {
+        throw new Error("豆包会话接口未返回有效数据，请先登录豆包后重试。")
+      }
+      connected = true
       const cells = Array.isArray(body.cells) ? body.cells : []
       if (!cells.length) break
       let pageContainsTargetDate = false
@@ -323,9 +328,9 @@ async function readHistory(date: string) {
     const conversations = fetched
       .filter(Boolean)
       .sort((a: any, b: any) => String(b.endedAt ?? "").localeCompare(String(a.endedAt ?? "")))
-    return { conversations }
+    return { conversations, connected }
   } catch (error) {
-    return { conversations: [], error: error instanceof Error ? error.message : "豆包历史读取失败" }
+    return { conversations: [], connected, error: error instanceof Error ? error.message : "豆包历史读取失败" }
   }
 }
 
