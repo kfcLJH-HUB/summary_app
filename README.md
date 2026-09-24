@@ -27,6 +27,19 @@
 
 它不是聊天客户端，也不是后台监控工具。它更像一个安静的日终整理器。
 
+## 下载与安装
+
+当前安装包适用于 **Apple Silicon Mac（M 系列芯片）**。发布安装包后，前往 [GitHub Releases](https://github.com/kfcLJH-HUB/summary_app/releases)，在对应版本的 **Assets** 中下载：
+
+| 文件 | 用途 |
+| --- | --- |
+| `AI Session Summary-0.1.0-arm64.dmg` | 推荐：打开 DMG，将应用拖入“应用程序”文件夹 |
+| `AI Session Summary-0.1.0-arm64.zip` | 备用：解压后将 `.app` 拖入“应用程序”文件夹 |
+
+首次打开未签名的应用时，macOS 可能拦截运行；确认文件来源可信后，可在“系统设置 → 隐私与安全性”中选择“仍要打开”。无需安装 Node.js 即可运行安装包。仓库为私有仓库，下载者需要获得访问权限。
+
+**当前仅在本机生成了安装包，尚未发布 GitHub Release。** 发布前，Releases 页面不会提供 DMG 或 ZIP 下载。
+
 ## 核心能力
 
 | 能力 | 说明 |
@@ -119,6 +132,8 @@ npm run package:mac
 ```
 
 生成的 DMG 和 ZIP 位于 `release/`。仅生成 `.app` 目录可运行 `npm run package:mac:dir`。当前配置面向 Apple Silicon，安装包尚未进行 Apple 开发者签名或公证。
+
+要让其他人通过上方的下载入口获取安装包，请在 GitHub 仓库的 **Releases → Draft a new release** 中创建版本（例如 `v0.1.0`），把 `release/` 内的 DMG 和 ZIP 上传为附件后发布。`release/` 已被 Git 忽略，不会随源码 `git push` 自动上传。
 
 ## 配置日报模型
 
