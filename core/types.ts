@@ -1,4 +1,4 @@
-export type Source = "codex" | "claude-code" | "doubao"
+export type Source = "codex" | "claude-code" | "doubao" | "deepseek"
 export type MessageRole = "user" | "assistant"
 
 export type Message = {
@@ -48,7 +48,16 @@ export type AppSettings = {
   summaryPrompt: string
 }
 
+export type DetectedSessionPaths = { codexPaths: string[]; claudePaths: string[] }
+
 export type DoubaoReadResult = {
+  conversations: Conversation[]
+  connected: boolean
+  needsLogin?: boolean
+  error?: string
+}
+
+export type DeepSeekReadResult = {
   conversations: Conversation[]
   connected: boolean
   needsLogin?: boolean
@@ -58,12 +67,17 @@ export type DoubaoReadResult = {
 export type ElectronApi = {
   scanLocalSessions: (date: string) => Promise<Conversation[]>
   readDoubaoSessions: (date: string) => Promise<DoubaoReadResult>
+  readDeepSeekSessions: (date: string) => Promise<DeepSeekReadResult>
   showDoubao: () => Promise<void>
   hideDoubao: () => Promise<void>
   onDoubaoVisibilityChanged: (listener: (visible: boolean) => void) => () => void
+  showDeepSeek: () => Promise<void>
+  hideDeepSeek: () => Promise<void>
+  onDeepSeekVisibilityChanged: (listener: (visible: boolean) => void) => () => void
   generateDailySummary: (conversations: Conversation[], options: SummaryOptions) => Promise<DailySummary>
   writeMarkdownSummary: (summary: DailySummary, outputPath?: string) => Promise<string>
   getSettings: () => Promise<AppSettings>
   saveSettings: (settings: AppSettings) => Promise<void>
   chooseDirectory: () => Promise<string | null>
+  detectSessionPaths: () => Promise<DetectedSessionPaths>
 }

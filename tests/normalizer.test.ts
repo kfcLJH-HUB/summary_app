@@ -32,7 +32,8 @@ describe("conversation normalizer", () => {
   })
 
   it("keeps sessions with the same id from different sources", () => {
-    const result = normalizeConversations([conversation(), conversation({ source: "doubao" })])
-    expect(result).toHaveLength(2)
+    const result = normalizeConversations([conversation(), conversation({ source: "doubao" }), conversation({ source: "deepseek" })])
+    expect(result).toHaveLength(3)
+    expect(result.map((item) => item.source)).toContain("deepseek")
   })
 })

@@ -67,5 +67,5 @@ export function sourceCounts(conversations: Conversation[]): Record<Source, numb
   return conversations.reduce<Record<Source, number>>((counts, conversation) => {
     counts[conversation.source] += 1
     return counts
-  }, { codex: 0, "claude-code": 0, doubao: 0 })
+  }, { codex: 0, "claude-code": 0, doubao: 0, deepseek: 0 })
 }

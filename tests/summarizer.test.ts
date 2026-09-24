@@ -47,4 +47,11 @@ describe("summarizer", () => {
     expect(body.messages[1].content).toContain("请按自定义规则处理")
     expect(summary.tomorrow).toEqual(["继续验证输出。"])
   })
+
+  it("includes DeepSeek conversations in the report and source breakdown", async () => {
+    const summary = await generateDailySummary("2026-09-22", [{ ...conversations[0], source: "deepseek" }], {
+      apiBaseUrl: "https://api.openai.com", apiKey: "", model: "gpt-4o-mini",
+    })
+    expect(summary.sourceBreakdown.deepseek).toBe(1)
+  })
 })

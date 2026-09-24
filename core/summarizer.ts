@@ -21,7 +21,10 @@ function endpoint(base: string): string {
 }
 
 function sourceLabel(source: Source): string {
-  return source === "claude-code" ? "Claude Code" : source === "codex" ? "Codex" : "豆包"
+  if (source === "claude-code") return "Claude Code"
+  if (source === "codex") return "Codex"
+  if (source === "doubao") return "豆包"
+  return "DeepSeek"
 }
 
 function conversationText(conversations: Conversation[], maxCharacters: number): string {
@@ -102,6 +105,7 @@ export async function generateDailySummary(date: string, conversations: Conversa
     `Codex：${counts.codex} 个会话`,
     `Claude Code：${counts["claude-code"]} 个会话`,
     `豆包：${counts.doubao} 个会话`,
+    `DeepSeek：${counts.deepseek} 个会话`,
   ]
   const sessionItems = conversations.map((conversation) => `**${sourceLabel(conversation.source)}** ${conversation.title}`)
   const markdown = `${section("今日完成事项", accomplishments)}\n\n${section("重点学习", knowledgeAbsorbed)}\n\n${section("明日建议", tomorrow)}\n\n## 来源统计\n\n${numbered(sourceItems)}\n\n## 会话清单\n\n${numbered(sessionItems)}`
