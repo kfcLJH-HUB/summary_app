@@ -176,6 +176,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
 .field { display: block; margin: 0 0 13px; color: #5f685f; font-size: 11px; font-weight: 600; line-height: 1.35; }
 .field-grid .field { margin-bottom: 0; }
+.toggle-field { display: inline-flex; align-items: center; gap: 8px; color: #485248; font-size: 12px; font-weight: 600; }
+.toggle-field input { width: 15px; height: 15px; margin: 0; accent-color: var(--primary); }
+.feishu-fields { margin-top: 13px; }
 .settings-modal input, .settings-modal textarea { display: block; width: 100%; margin-top: 6px; padding: 9px 10px; font-size: 12px; line-height: 1.45; }
 .settings-modal input { height: 36px; padding-block: 0; }
 .settings-modal textarea { min-height: 72px; resize: vertical; }

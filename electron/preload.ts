@@ -21,6 +21,7 @@ const api: ElectronApi = {
   },
   generateDailySummary: (conversations, options) => ipcRenderer.invoke("summary:generate", conversations, options),
   writeMarkdownSummary: (summary, outputPath) => ipcRenderer.invoke("summary:write", summary, outputPath),
+  appendFeishuSummary: (summary) => ipcRenderer.invoke("summary:append-feishu", summary),
   getSettings: () => ipcRenderer.invoke("settings:get"),
   saveSettings: (settings) => ipcRenderer.invoke("settings:save", settings),
   chooseDirectory: () => ipcRenderer.invoke("settings:choose-directory"),

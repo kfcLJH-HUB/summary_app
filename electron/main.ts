@@ -8,6 +8,7 @@ import { DEFAULT_SUMMARY_PROMPT, generateDailySummary } from "../core/summarizer
 import { defaultOutputPath, writeSummaryMarkdown } from "../core/markdown-writer"
 import { normalizeConversations } from "../core/normalizer"
 import { detectSessionPaths } from "../core/session-paths"
+import { appendSummaryToFeishu } from "../core/feishu"
 import type { AppSettings, DailySummary } from "../core/types"
 
 let mainWindow: BrowserWindow | null = null
@@ -42,6 +43,10 @@ function defaultSettings(): AppSettings {
     apiKey: "",
     model: "gpt-4o-mini",
     summaryPrompt: DEFAULT_SUMMARY_PROMPT,
+    feishuEnabled: false,
+    feishuAppId: "",
+    feishuAppSecret: "",
+    feishuDocumentId: "",
   }
 }
 function loadSettings(): AppSettings {
@@ -210,6 +215,7 @@ ipcMain.handle("summary:write", (_event, summary: DailySummary, outputPath?: str
   const target = outputPath ? (outputPath.endsWith(".md") ? outputPath : join(outputPath, `${summary.date}.md`)) : defaultOutputPath(summary.date)
   return writeSummaryMarkdown(summary, target)
 })
+ipcMain.handle("summary:append-feishu", (_event, summary: DailySummary) => appendSummaryToFeishu(summary, loadSettings()))
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock()
 if (!hasSingleInstanceLock) {

@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="build/icon.svg" width="112" alt="AI Session Summary icon" />
+<img src="build/icon.png" width="112" alt="AI Session Summary icon" />
 
 # AI Session Summary
 
@@ -53,6 +53,7 @@
 | Markdown 输出 | 默认保存到 `~/Documents/AI-Daily-Summaries/YYYY-MM-DD.md` |
 | 可定制提示词 | 在设置中修改日报生成提示词和输出格式 |
 | 路径自动检测 | 自动检查默认的 Codex、Claude Code 会话目录，也支持手动添加路径 |
+| 飞书同步 | 集成代码已预留，当前版本暂未启用 |
 
 ## 日报长什么样
 
@@ -135,6 +136,18 @@ npm run package:mac
 
 要让其他人通过上方的下载入口获取安装包，请在 GitHub 仓库的 **Releases → Draft a new release** 中创建版本（例如 `v0.1.0`），把 `release/` 内的 DMG 和 ZIP 上传为附件后发布。`release/` 已被 Git 忽略，不会随源码 `git push` 自动上传。
 
+## 飞书同步（暂未启用）
+
+当前版本暂时隐藏飞书同步入口，相关代码已保留，后续恢复入口后可以按以下方式配置：
+
+1. 在[飞书开放平台](https://open.feishu.cn/)创建企业自建应用，记录 App ID 和 App Secret。
+2. 为应用开通云文档读写权限，并根据飞书后台要求发布或启用应用。
+3. 将目标云文档共享给该应用，或确保应用对文档所在空间有访问权限。
+4. 打开应用设置，勾选“生成日报后同步到飞书”，填写 App ID、App Secret 和飞书文档链接。
+5. 点击“生成日报”。本地 Markdown 保存成功后，日报会追加到该飞书文档末尾。
+
+支持直接填写 `https://xxx.feishu.cn/docx/...` 文档链接，也支持填写文档 ID。飞书凭证只保存在本机用户配置中，不会写入项目目录；同步请求由 Electron 主进程发起。重复生成同一天的日报会再次追加一份内容，请避免重复点击，或在飞书文档中手动删除重复段落。
+
 ## 配置日报模型
 
 打开应用右上角设置，填写：
@@ -180,7 +193,7 @@ summary_app/
 │   ├── App.tsx                 # 主界面
 │   └── styles/                 # 应用样式
 ├── tests/                      # 读取、去重、总结和路径检测测试
-└── build/icon.svg              # macOS 应用图标源文件
+└── build/icon.png              # macOS 应用图标源文件
 ```
 
 ## 当前边界

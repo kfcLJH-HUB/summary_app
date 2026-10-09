@@ -46,6 +46,10 @@ export type AppSettings = {
   apiKey: string
   model: string
   summaryPrompt: string
+  feishuEnabled: boolean
+  feishuAppId: string
+  feishuAppSecret: string
+  feishuDocumentId: string
 }
 
 export type DetectedSessionPaths = { codexPaths: string[]; claudePaths: string[] }
@@ -76,6 +80,7 @@ export type ElectronApi = {
   onDeepSeekVisibilityChanged: (listener: (visible: boolean) => void) => () => void
   generateDailySummary: (conversations: Conversation[], options: SummaryOptions) => Promise<DailySummary>
   writeMarkdownSummary: (summary: DailySummary, outputPath?: string) => Promise<string>
+  appendFeishuSummary: (summary: DailySummary) => Promise<string>
   getSettings: () => Promise<AppSettings>
   saveSettings: (settings: AppSettings) => Promise<void>
   chooseDirectory: () => Promise<string | null>

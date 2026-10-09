@@ -208,6 +208,8 @@ function App() {
       const result = await window.summaryApi.generateDailySummary(items, { ...activeSettings, date: targetDate })
       setSummary(result)
       const path = await window.summaryApi.writeMarkdownSummary(result, activeSettings.outputPath)
+      // Feishu sync is intentionally disabled for now. The integration remains
+      // in core/feishu.ts and can be re-enabled when the document flow is ready.
       setSessionStatus(`日报已保存：${path}`)
       return true
     } catch (error) { setSessionStatus(error instanceof Error ? error.message : "生成日报失败"); return false } finally { loadingRef.current = false; setLoading(false) }
@@ -480,6 +482,18 @@ function App() {
           </div>
           <div className="path-detection-row"><button type="button" className="ghost" onClick={() => void autoDetectPaths()} disabled={detectingPaths}><RefreshCw size={14} className={detectingPaths ? "spin" : undefined} />{detectingPaths ? "检测中" : "自动检测路径"}</button><span role="status" className="settings-hint">{pathDetectionStatus}</span></div>
         </div>
+        {/* Feishu sync is temporarily hidden; keep the implementation for a later release.
+        <div className="settings-group">
+          <div className="settings-group-heading"><h3>飞书同步</h3><p>生成日报后，自动把内容追加到指定的飞书云文档。</p></div>
+          <label className="toggle-field"><input type="checkbox" checked={settings.feishuEnabled} onChange={(event) => setSettings({ ...settings, feishuEnabled: event.target.checked })} /><span>生成日报后同步到飞书</span></label>
+          <span className="settings-hint">需要在飞书开放平台创建企业自建应用，并为应用开通云文档读写权限。</span>
+          <div className="field-grid feishu-fields">
+            <label className="field">App ID<input value={settings.feishuAppId} onChange={(event) => setSettings({ ...settings, feishuAppId: event.target.value })} placeholder="cli_..." /></label>
+            <label className="field">App Secret<input type="password" value={settings.feishuAppSecret} onChange={(event) => setSettings({ ...settings, feishuAppSecret: event.target.value })} placeholder="仅保存在本机" /></label>
+          </div>
+          <label className="field">飞书文档链接或文档 ID<input value={settings.feishuDocumentId} onChange={(event) => setSettings({ ...settings, feishuDocumentId: event.target.value })} placeholder="https://xxx.feishu.cn/docx/..." /><span className="settings-hint">请先把该文档共享给飞书应用，否则接口会返回无权限。</span></label>
+        </div>
+        */}
         <div className="modal-actions"><button type="button" className="ghost" onClick={() => setShowSettings(false)}>取消</button><button type="button" className="primary" onClick={() => void saveSettings()}><Check size={16} />保存设置</button></div>
       </section>
     </div>}
