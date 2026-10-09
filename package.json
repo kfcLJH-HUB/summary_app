@@ -10,6 +10,8 @@
     "start": "electron .",
     "package:mac": "npm run build && electron-builder --mac --arm64",
     "package:mac:dir": "npm run build && electron-builder --mac --arm64 --dir",
+    "package:win": "npm run build && electron-builder --win --x64",
+    "package:win:dir": "npm run build && electron-builder --win --x64 --dir",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -69,6 +71,22 @@
     },
     "directories": {
       "output": "release"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ],
+      "icon": "build/icon.png",
+      "artifactName": "${productName}-${version}-win-${arch}.${ext}"
+    },
+    "nsis": {
+      "artifactName": "${productName}-${version}-win-${arch}-setup.${ext}",
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
     }
   }
 }

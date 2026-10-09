@@ -6,10 +6,11 @@
 
 ### 把散落在不同 AI 工具里的对话，整理成每天都能回看的工程日志。
 
-一个面向 macOS 的本地 AI 会话日报应用。读取 Codex、Claude Code、豆包和 DeepSeek 的当天会话，通过 OpenAI 兼容模型生成简洁日报，最终保存为 Markdown。
+一个面向 macOS 和 Windows 的本地 AI 会话日报应用。读取 Codex、Claude Code、豆包和 DeepSeek 的当天会话，通过 OpenAI 兼容模型生成简洁日报，最终保存为 Markdown。
 
 <p>
   <img src="https://img.shields.io/badge/platform-macOS-111827?style=flat-square" alt="macOS" />
+  <img src="https://img.shields.io/badge/platform-Windows-0078D6?style=flat-square&logo=windows&logoColor=white" alt="Windows" />
   <img src="https://img.shields.io/badge/Electron-44-47848F?style=flat-square&logo=electron&logoColor=white" alt="Electron 44" />
   <img src="https://img.shields.io/badge/React-18-149ECA?style=flat-square&logo=react&logoColor=white" alt="React 18" />
   <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
@@ -29,14 +30,16 @@
 
 ## 下载与安装
 
-当前安装包适用于 **Apple Silicon Mac（M 系列芯片）**。发布安装包后，前往 [GitHub Releases](https://github.com/kfcLJH-HUB/summary_app/releases)，在对应版本的 **Assets** 中下载：
+当前提供 **Apple Silicon Mac（M 系列芯片）** 和 **Windows x64** 版本。发布安装包后，前往 [GitHub Releases](https://github.com/kfcLJH-HUB/summary_app/releases)，在对应版本的 **Assets** 中下载：
 
-| 文件 | 用途 |
-| --- | --- |
-| `AI Session Summary-0.1.0-arm64.dmg` | 推荐：打开 DMG，将应用拖入“应用程序”文件夹 |
-| `AI Session Summary-0.1.0-arm64.zip` | 备用：解压后将 `.app` 拖入“应用程序”文件夹 |
+| 平台 | 文件 | 用途 |
+| --- | --- | --- |
+| macOS | `AI Session Summary-0.1.0-arm64.dmg` | 推荐：打开 DMG，将应用拖入“应用程序”文件夹 |
+| macOS | `AI Session Summary-0.1.0-arm64.zip` | 备用：解压后将 `.app` 拖入“应用程序”文件夹 |
+| Windows x64 | `AI Session Summary-0.1.0-win-x64-setup.exe` | 推荐：运行安装程序，按向导完成安装 |
+| Windows x64 | `AI Session Summary-0.1.0-win-x64.zip` | 备用：解压后直接运行应用程序 |
 
-首次打开未签名的应用时，macOS 可能拦截运行；确认文件来源可信后，可在“系统设置 → 隐私与安全性”中选择“仍要打开”。无需安装 Node.js 即可运行安装包。仓库为私有仓库，下载者需要获得访问权限。
+macOS 安装包当前未进行 Apple 开发者签名或公证，首次打开时可能需要在“系统设置 → 隐私与安全性”中选择“仍要打开”。Windows 安装包面向 64 位 Windows。无需安装 Node.js 即可运行已打包的应用。仓库为私有仓库，下载者需要获得访问权限。
 
 **当前仅在本机生成了安装包，尚未发布 GitHub Release。** 发布前，Releases 页面不会提供 DMG 或 ZIP 下载。
 
@@ -102,8 +105,8 @@ Codex 会优先使用 `~/.codex/session_index.jsonl` 中的原生标题；Claude
 
 ### 环境要求
 
-- macOS（打包脚本目前针对 Apple Silicon）
-- Node.js 18 或更高版本
+- macOS（Apple Silicon，M 系列芯片）或 Windows x64
+- Node.js 18 或更高版本（仅开发和自行构建时需要）
 - npm
 
 ### 安装与开发
@@ -132,9 +135,21 @@ npm start
 npm run package:mac
 ```
 
-生成的 DMG 和 ZIP 位于 `release/`。仅生成 `.app` 目录可运行 `npm run package:mac:dir`。当前配置面向 Apple Silicon，安装包尚未进行 Apple 开发者签名或公证。
+生成 Apple Silicon 版 DMG 和 ZIP，文件位于 `release/`。仅生成 `.app` 目录可运行 `npm run package:mac:dir`。
 
-要让其他人通过上方的下载入口获取安装包，请在 GitHub 仓库的 **Releases → Draft a new release** 中创建版本（例如 `v0.1.0`），把 `release/` 内的 DMG 和 ZIP 上传为附件后发布。`release/` 已被 Git 忽略，不会随源码 `git push` 自动上传。
+### 打包 Windows 安装包
+
+```bash
+npm run package:win
+```
+
+生成 Windows x64 版 NSIS 安装程序和 ZIP，文件位于 `release/`。仅生成未安装的 Windows 应用目录可运行 `npm run package:win:dir`。
+
+推荐直接在目标平台上打包。macOS 交叉构建 Windows NSIS 安装程序可能需要额外安装 Wine；如果只是发布 Windows 版本，建议在 Windows 机器或 CI 中执行 `npm run package:win`。
+
+项目还提供了 GitHub Actions 工作流：打开仓库的 **Actions → Build Windows → Run workflow**，即可在 Windows runner 上构建并下载 `AI Session Summary` 的 Windows x64 安装包和 ZIP artifact。
+
+要让其他人通过上方的下载入口获取安装包，请在 GitHub 仓库的 **Releases → Draft a new release** 中创建版本（例如 `v0.1.0`），把 `release/` 内对应平台的安装文件上传为附件后发布。`release/` 已被 Git 忽略，不会随源码 `git push` 自动上传。
 
 ## 飞书同步（暂未启用）
 
@@ -193,7 +208,7 @@ summary_app/
 │   ├── App.tsx                 # 主界面
 │   └── styles/                 # 应用样式
 ├── tests/                      # 读取、去重、总结和路径检测测试
-└── build/icon.png              # macOS 应用图标源文件
+└── build/icon.png              # macOS 和 Windows 应用图标源文件
 ```
 
 ## 当前边界

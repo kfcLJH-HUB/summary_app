@@ -11,7 +11,7 @@ function existingDirectories(paths: string[]): string[] {
 
 function configuredRoot(path: string | undefined, home: string): string | undefined {
   if (!path?.trim()) return undefined
-  const expanded = path.trim().replace(/^~(?=$|[\/])/, home)
+  const expanded = path.trim().replace(/^~(?=$|[\\/])/, home)
   return isAbsolute(expanded) ? expanded : undefined
 }
 

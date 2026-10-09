@@ -39,4 +39,18 @@ describe("session path detection", () => {
   it("ignores relative environment overrides", () => {
     expect(detectSessionPaths(fixture(), { CODEX_HOME: "relative", CLAUDE_CONFIG_DIR: "relative" })).toEqual({ codexPaths: [], claudePaths: [] })
   })
+
+  it("supports native path separators in home-relative configuration roots", () => {
+    const home = fixture()
+    const codex = join(home, "custom-codex", "sessions")
+    const claude = join(home, "custom-claude", "projects")
+    mkdirSync(codex, { recursive: true })
+    mkdirSync(claude, { recursive: true })
+    const separator = process.platform === "win32" ? "\\" : "/"
+
+    expect(detectSessionPaths(home, {
+      CODEX_HOME: `~${separator}custom-codex`,
+      CLAUDE_CONFIG_DIR: `~${separator}custom-claude`,
+    })).toEqual({ codexPaths: [codex], claudePaths: [claude] })
+  })
 })
