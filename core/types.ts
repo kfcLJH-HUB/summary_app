@@ -46,6 +46,8 @@ export type AppSettings = {
   apiKey: string
   model: string
   summaryPrompt: string
+  autoSummaryEnabled: boolean
+  autoSummaryTime: string
   feishuEnabled: boolean
   feishuAppId: string
   feishuAppSecret: string

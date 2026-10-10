@@ -1,0 +1,65 @@
+name: 问题反馈
+description: 报告会话读取、日报生成、界面或安装问题
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请先搜索已有 Issue。不要上传 API Key、Cookie、Token、真实会话或含用户名的路径。
+        安全漏洞请先阅读 SECURITY.md，并通过私下渠道反馈。
+  - type: input
+    id: version
+    attributes:
+      label: 应用版本 / 提交号
+      placeholder: "例如：0.1.0，安装包或源码运行"
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: 操作系统与芯片架构
+      placeholder: "例如：macOS + Apple Silicon / Windows 11 + x64"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: 相关功能
+      options:
+        - 安装 / 启动
+        - Codex 读取
+        - Claude Code 读取
+        - 豆包读取
+        - DeepSeek 读取
+        - 日报生成 / 自动生成
+        - 设置 / 界面
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: "1. 打开应用\n2. ..."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期结果
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际结果及已脱敏的错误信息
+      description: 如附截图，请遮住私人会话、密钥和用户名。
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: 隐私检查
+      options:
+        - label: 我已检查并移除敏感信息。
+          required: true

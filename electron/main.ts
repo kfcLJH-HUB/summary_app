@@ -8,6 +8,7 @@ import { DEFAULT_SUMMARY_PROMPT, generateDailySummary } from "../core/summarizer
 import { defaultOutputPath, writeSummaryMarkdown } from "../core/markdown-writer"
 import { normalizeConversations } from "../core/normalizer"
 import { detectSessionPaths } from "../core/session-paths"
+import { DEFAULT_SUMMARY_SCHEDULE, normalizeSummarySchedule } from "../core/summary-schedule"
 import { appendSummaryToFeishu } from "../core/feishu"
 import type { AppSettings, DailySummary } from "../core/types"
 
@@ -43,6 +44,7 @@ function defaultSettings(): AppSettings {
     apiKey: "",
     model: "gpt-4o-mini",
     summaryPrompt: DEFAULT_SUMMARY_PROMPT,
+    ...DEFAULT_SUMMARY_SCHEDULE,
     feishuEnabled: false,
     feishuAppId: "",
     feishuAppSecret: "",
@@ -52,13 +54,16 @@ function defaultSettings(): AppSettings {
 function loadSettings(): AppSettings {
   const defaults = defaultSettings()
   for (const path of [settingsPath(), settingsPath("settings.json")]) {
-    try { return { ...defaults, ...(JSON.parse(readFileSync(path, "utf8")) as Partial<AppSettings>) } } catch { /* Try the next compatible location. */ }
+    try {
+      const stored = JSON.parse(readFileSync(path, "utf8")) as Partial<AppSettings>
+      return { ...defaults, ...stored, ...normalizeSummarySchedule(stored) }
+    } catch { /* Try the next compatible location. */ }
   }
   return defaults
 }
 function saveSettings(settings: AppSettings) {
   const path = settingsPath()
-  writeFileSync(path, JSON.stringify(settings, null, 2), { encoding: "utf8", mode: 0o600 })
+  writeFileSync(path, JSON.stringify({ ...settings, ...normalizeSummarySchedule(settings) }, null, 2), { encoding: "utf8", mode: 0o600 })
   chmodSync(path, 0o600)
 }
 

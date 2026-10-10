@@ -1,0 +1,73 @@
+name: Package installers
+
+on:
+  workflow_call:
+    inputs:
+      release-tag:
+        description: Optional version tag to validate before building
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-arm64
+            runner: macos-15
+            command: package:mac
+            installer: '*-arm64.dmg'
+            archive: '*-arm64.zip'
+          - platform: windows-x64
+            runner: windows-2022
+            command: package:win
+            installer: '*-win-x64-setup.exe'
+            archive: '*-win-x64.zip'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    env:
+      TZ: Asia/Shanghai
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      RELEASE_TAG: ${{ inputs.release-tag }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Verify runner architecture
+        run: node scripts/release.cjs host ${{ matrix.platform }}
+      - name: Verify release version
+        if: inputs.release-tag != ''
+        run: node scripts/release.cjs tag "$RELEASE_TAG"
+        shell: bash
+      - name: Install dependencies
+        run: npm ci
+      - name: Type check
+        run: npm run typecheck
+      - name: Run tests
+        run: npm test
+      - name: Build installers (never auto-publish)
+        run: npm run ${{ matrix.command }}
+      - name: Verify executable, licenses, version and installer checksums
+        run: node scripts/release.cjs verify ${{ matrix.platform }}
+      - name: Upload installers and checksums
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: installers-${{ matrix.platform }}
+          path: |
+            release/${{ matrix.installer }}
+            release/${{ matrix.archive }}
+            release/SHA256SUMS-${{ matrix.platform }}.txt
+          if-no-files-found: error
+          retention-days: 14

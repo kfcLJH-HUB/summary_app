@@ -1,0 +1,48 @@
+name: Build installers
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+      - '.github/scripts/**'
+      - 'scripts/**'
+      - 'package*.json'
+      - 'LICENSE'
+      - 'THIRD_PARTY_NOTICES.md'
+      - 'build/**'
+      - 'core/**'
+      - 'electron/**'
+      - 'src/**'
+      - 'public/**'
+      - 'tests/**'
+      - 'index.html'
+      - '*config*'
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - '.github/scripts/**'
+      - 'scripts/**'
+      - 'package*.json'
+      - 'LICENSE'
+      - 'THIRD_PARTY_NOTICES.md'
+      - 'build/**'
+      - 'core/**'
+      - 'electron/**'
+      - 'src/**'
+      - 'public/**'
+      - 'tests/**'
+      - 'index.html'
+      - '*config*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  installers:
+    uses: ./.github/workflows/package.yml

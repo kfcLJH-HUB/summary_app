@@ -14,6 +14,7 @@
   <img src="https://img.shields.io/badge/Electron-44-47848F?style=flat-square&logo=electron&logoColor=white" alt="Electron 44" />
   <img src="https://img.shields.io/badge/React-18-149ECA?style=flat-square&logo=react&logoColor=white" alt="React 18" />
   <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/license-MIT-0F766E?style=flat-square" alt="MIT License" />
 </p>
 
 </div>
@@ -30,16 +31,18 @@
 
 ## 下载与安装
 
-当前提供 **Apple Silicon Mac（M 系列芯片）** 和 **Windows x64** 版本。发布安装包后，前往 [GitHub Releases](https://github.com/kfcLJH-HUB/summary_app/releases)，在对应版本的 **Assets** 中下载：
+当前已配置 **Apple Silicon Mac（M 系列芯片）** 和 **Windows x64** 自动打包及 Release 草稿流程。macOS 可在本机打包；Windows 的云端构建与实机验收尚待完成。发布后，前往 [GitHub Releases](https://github.com/kfcLJH-HUB/summary_app/releases)，在对应版本的 **Assets** 中按下面的文件名下载：
 
 | 平台 | 文件 | 用途 |
 | --- | --- | --- |
-| macOS | `AI Session Summary-0.1.0-arm64.dmg` | 推荐：打开 DMG，将应用拖入“应用程序”文件夹 |
-| macOS | `AI Session Summary-0.1.0-arm64.zip` | 备用：解压后将 `.app` 拖入“应用程序”文件夹 |
-| Windows x64 | `AI Session Summary-0.1.0-win-x64-setup.exe` | 推荐：运行安装程序，按向导完成安装 |
-| Windows x64 | `AI Session Summary-0.1.0-win-x64.zip` | 备用：解压后直接运行应用程序 |
+| macOS | `AI-Session-Summary-0.1.0-arm64.dmg` | 推荐：打开 DMG，将应用拖入“应用程序”文件夹 |
+| macOS | `AI-Session-Summary-0.1.0-arm64.zip` | 备用：解压后将 `.app` 拖入“应用程序”文件夹 |
+| Windows x64 | `AI-Session-Summary-0.1.0-win-x64-setup.exe` | 推荐：运行安装程序，按向导完成安装 |
+| Windows x64 | `AI-Session-Summary-0.1.0-win-x64.zip` | 备用：解压后直接运行应用程序 |
 
-macOS 安装包当前未进行 Apple 开发者签名或公证，首次打开时可能需要在“系统设置 → 隐私与安全性”中选择“仍要打开”。Windows 安装包面向 64 位 Windows。无需安装 Node.js 即可运行已打包的应用。仓库为私有仓库，下载者需要获得访问权限。
+macOS 安装包当前未进行 Apple Developer ID 签名或公证，Windows 安装包也未进行 Authenticode 签名，因此首次运行可能提示来源未验证。确认下载来源可信后再按系统提示处理，不建议关闭系统安全保护。无需安装 Node.js 即可运行已打包的应用。如果仓库仍为私有仓库，下载者需要获得访问权限。
+
+每个平台同时提供 `SHA256SUMS-*.txt`，可检查下载文件是否完整，方法见 [发布与校验指南](docs/RELEASING.md)。文件名中的 `0.1.0` 以实际发布版本为准。
 
 **当前仅在本机生成了安装包，尚未发布 GitHub Release。** 发布前，Releases 页面不会提供 DMG 或 ZIP 下载。
 
@@ -52,7 +55,7 @@ macOS 安装包当前未进行 Apple 开发者签名或公证，首次打开时�
 | 多来源统一 | 将不同工具转换为统一的会话、消息和来源模型 |
 | 智能日报 | 支持 OpenAI、DeepSeek、智谱、硅基流动等 OpenAI 兼容 API |
 | 本地降级 | 未填写 API Key 时，使用本地规则生成基础日报 |
-| 自动整理 | 启动时读取一次，此后每 5 分钟读取一次；应用运行时每天 19:00 自动生成日报 |
+| 自动整理 | 启动时读取一次，此后每 5 分钟读取一次；设置中可启用或关闭每日自动生成，并自定义时间（默认 19:00） |
 | Markdown 输出 | 默认保存到 `~/Documents/AI-Daily-Summaries/YYYY-MM-DD.md` |
 | 可定制提示词 | 在设置中修改日报生成提示词和输出格式 |
 | 路径自动检测 | 自动检查默认的 Codex、Claude Code 会话目录，也支持手动添加路径 |
@@ -106,7 +109,7 @@ Codex 会优先使用 `~/.codex/session_index.jsonl` 中的原生标题；Claude
 ### 环境要求
 
 - macOS（Apple Silicon，M 系列芯片）或 Windows x64
-- Node.js 18 或更高版本（仅开发和自行构建时需要）
+- Node.js 22 LTS，至少 22.12.0（仅开发和自行构建时需要）
 - npm
 
 ### 安装与开发
@@ -114,7 +117,7 @@ Codex 会优先使用 `~/.codex/session_index.jsonl` 中的原生标题；Claude
 ```bash
 git clone https://github.com/kfcLJH-HUB/summary_app.git
 cd summary_app
-npm install
+npm ci
 npm run dev
 ```
 
@@ -147,9 +150,13 @@ npm run package:win
 
 推荐直接在目标平台上打包。macOS 交叉构建 Windows NSIS 安装程序可能需要额外安装 Wine；如果只是发布 Windows 版本，建议在 Windows 机器或 CI 中执行 `npm run package:win`。
 
-项目还提供了 GitHub Actions 工作流：打开仓库的 **Actions → Build Windows → Run workflow**，即可在 Windows runner 上构建并下载 `AI Session Summary` 的 Windows x64 安装包和 ZIP artifact。
+### 自动构建与发布
 
-要让其他人通过上方的下载入口获取安装包，请在 GitHub 仓库的 **Releases → Draft a new release** 中创建版本（例如 `v0.1.0`），把 `release/` 内对应平台的安装文件上传为附件后发布。`release/` 已被 Git 忽略，不会随源码 `git push` 自动上传。
+- **试用构建**：提交工作流后，打开 **Actions → Build installers → Run workflow**，同时构建 macOS arm64 和 Windows x64；成功后可在该次运行的 Artifacts 下载两端安装包与校验文件，保留 14 天。
+- **版本发布**：推送与 `package.json` 版本一致的标签（如 `v0.1.0`），两端构建和校验都成功后自动创建 **Release 草稿**，附上 DMG、Mac ZIP、Windows 安装程序、Windows ZIP 和两个 SHA256 校验文件。
+- **人工确认**：草稿不会自动公开。完成安装、启动和会话读取验收后，由维护者点击 Publish release。已发布的版本不会被工作流覆盖。
+
+普通构建不需要配置发布密钥，也不会自动上传到 Releases。本地 `release/` 仍被 Git 忽略；仅推送源码不会发布安装包。完整步骤和验收清单见 [发布指南](docs/RELEASING.md)。
 
 ## 飞书同步（暂未启用）
 
@@ -164,6 +171,8 @@ npm run package:win
 支持直接填写 `https://xxx.feishu.cn/docx/...` 文档链接，也支持填写文档 ID。飞书凭证只保存在本机用户配置中，不会写入项目目录；同步请求由 Electron 主进程发起。重复生成同一天的日报会再次追加一份内容，请避免重复点击，或在飞书文档中手动删除重复段落。
 
 ## 配置日报模型
+
+设置中的“自动生成日报”支持开关和时间选择，保存后生效。使用电脑本地时间，应用需保持打开；错过时间后打开会补生成。当日没有会话时跳过，每天最多自动生成一次。关闭自动生成不会影响每 5 分钟读取会话和手动生成日报。
 
 打开应用右上角设置，填写：
 
@@ -221,7 +230,14 @@ summary_app/
 
 ## 许可证
 
-仓库当前尚未声明正式开源许可证。除第三方依赖和参考项目外，项目代码的使用、修改和再分发请先联系作者确认。
+本项目自有代码采用 [MIT 许可证](LICENSE)，版权署名为 `kfcLJH-HUB`。第三方依赖、品牌图标和商标不因本项目采用 MIT 而变更其原有权利，详见 [第三方声明](THIRD_PARTY_NOTICES.md)。
+
+## 参与与反馈
+
+- 开始贡献前请阅读 [贡献指南](CONTRIBUTING.md)。
+- 问题反馈与功能建议可使用仓库的 Issue 模板，提交前请移除私人会话、密钥和用户名路径。
+- 版本变化见 [更新日志](CHANGELOG.md)，未发布内容列在 Unreleased。
+- 安全问题与当前数据处理边界见 [安全说明](SECURITY.md)。
 
 ---
 

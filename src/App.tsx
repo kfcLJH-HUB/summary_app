@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from "react"
 import { ArrowLeft, Bot, Check, ChevronDown, ChevronRight, Clock3, FileText, LoaderCircle, PanelRight, RefreshCw, Settings2, Sparkles, X } from "lucide-react"
 import type { AppSettings, Conversation, DailySummary, Source } from "../core/types"
 import { normalizeConversations } from "../core/normalizer"
+import { normalizeSummarySchedule, shouldGenerateDailySummary, summaryScheduleNote } from "../core/summary-schedule"
+import type { SummarySchedule } from "../core/summary-schedule"
+import { AutoSummarySettings } from "./components/AutoSummarySettings"
 import codexIcon from "./assets/codex.png"
 import claudeIcon from "./assets/claude.png"
 import doubaoIcon from "./assets/doubao.png"
@@ -10,7 +13,6 @@ import deepseekIcon from "./assets/deepseek.svg"
 const today = () => new Intl.DateTimeFormat("en-CA").format(new Date())
 const sourceName: Record<Source, string> = { codex: "Codex", "claude-code": "Claude Code", doubao: "豆包", deepseek: "DeepSeek" }
 const AUTO_REFRESH_INTERVAL = 5 * 60 * 1000
-const DAILY_SUMMARY_HOUR = 19
 const DAILY_SUMMARY_STORAGE_KEY = "ai-session-summary:last-auto-summary-date"
 const ENABLED_SOURCES_STORAGE_KEY = "ai-session-summary:enabled-sources"
 const DEFAULT_SOURCES: Source[] = ["codex", "claude-code"]
@@ -59,6 +61,8 @@ function App() {
   const [selected, setSelected] = useState<Conversation | null>(null)
   const [summary, setSummary] = useState<DailySummary | null>(null)
   const [settings, setSettings] = useState<AppSettings | null>(null)
+  // Keep the active schedule separate from unsaved edits in the settings dialog.
+  const [savedSchedule, setSavedSchedule] = useState<SummarySchedule | null>(null)
   const [loading, setLoading] = useState(false)
   const [sessionStatus, setSessionStatus] = useState("")
   const [showSettings, setShowSettings] = useState(false)
@@ -103,12 +107,12 @@ function App() {
   }, [date, enabledSources])
 
   useEffect(() => {
+    if (!savedSchedule?.autoSummaryEnabled) return
     const checkDailySummary = () => {
       const now = new Date()
-      if (now.getHours() < DAILY_SUMMARY_HOUR) return
-
+      if (!shouldGenerateDailySummary(now, savedSchedule, dailySummaryDayRef.current,
+        loadingRef.current || Boolean(embeddedSourceRef.current))) return
       const scheduledDate = today()
-      if (dailySummaryDayRef.current === scheduledDate || loadingRef.current || embeddedSourceRef.current) return
       dailySummaryDayRef.current = scheduledDate
       void runScheduledSummary(scheduledDate)
     }
@@ -116,7 +120,7 @@ function App() {
     checkDailySummary()
     const timer = window.setInterval(checkDailySummary, 30 * 1000)
     return () => window.clearInterval(timer)
-  }, [date, enabledSources])
+  }, [date, enabledSources, savedSchedule])
 
   useEffect(() => {
     function closeToolMenu(event: MouseEvent) {
@@ -136,7 +140,9 @@ function App() {
 
   async function loadSettings() {
     if (!window.summaryApi) return
-    setSettings(await window.summaryApi.getSettings())
+    const loaded = await window.summaryApi.getSettings()
+    setSettings(loaded)
+    setSavedSchedule(normalizeSummarySchedule(loaded))
   }
 
   async function scanSessions(automatic = false, targetDate = date, sources = enabledSources) {
@@ -197,14 +203,13 @@ function App() {
   async function generateForConversations(items: Conversation[], targetDate: string, automatic = false) {
     await closeEmbedded()
     if (!items.length) {
-      setSessionStatus(automatic ? "19:00 未生成日报：今天没有会话" : "请先读取会话")
+      setSessionStatus(automatic ? "未自动生成日报：今天没有会话" : "请先读取会话")
       return false
     }
-    if (!settings) await loadSettings()
-    const activeSettings = settings ?? await window.summaryApi.getSettings()
     loadingRef.current = true
     setLoading(true); setSessionStatus("正在生成日报……")
     try {
+      const activeSettings = await window.summaryApi.getSettings()
       const result = await window.summaryApi.generateDailySummary(items, { ...activeSettings, date: targetDate })
       setSummary(result)
       const path = await window.summaryApi.writeMarkdownSummary(result, activeSettings.outputPath)
@@ -336,8 +341,15 @@ function App() {
 
   async function saveSettings() {
     if (!settings) return
-    await window.summaryApi.saveSettings(settings)
-    setShowSettings(false); setSessionStatus("设置已保存")
+    try {
+      const schedule = normalizeSummarySchedule(settings)
+      await window.summaryApi.saveSettings({ ...settings, ...schedule })
+      setSettings({ ...settings, ...schedule })
+      setSavedSchedule(schedule)
+      setShowSettings(false); setSessionStatus("设置已保存")
+    } catch (error) {
+      setSessionStatus(error instanceof Error ? error.message : "保存设置失败")
+    }
   }
 
   async function autoDetectPaths() {
@@ -425,7 +437,7 @@ function App() {
             <h2 id="sessions-title">会话记录</h2>
             {sessionStatus && <div className="session-status" title={sessionStatus}>{loading && <LoaderCircle className="spin" size={15} />}{sessionStatus}</div>}
           </div>
-          <span className="auto-refresh-note"><Clock3 size={13} />每 5 分钟读取，19:00 自动生成</span>
+          <span className="auto-refresh-note"><Clock3 size={13} />{summaryScheduleNote(savedSchedule)}</span>
         </div>
         <div className="session-list">
           {conversations.map((conversation) => <button type="button" className={`session-row ${selected?.source === conversation.source && selected?.sessionId === conversation.sessionId ? "selected" : ""}`} key={`${conversation.source}-${conversation.sessionId}`} onClick={() => setSelected(conversation)} aria-pressed={selected?.source === conversation.source && selected?.sessionId === conversation.sessionId}>
@@ -461,6 +473,7 @@ function App() {
           <div><h2 id="settings-title">设置</h2><p>配置总结服务、日报格式和本地会话目录。</p></div>
           <button type="button" className="icon-button" title="关闭设置" aria-label="关闭设置" onClick={() => setShowSettings(false)}><X size={17} /></button>
         </div>
+        <AutoSummarySettings schedule={settings} onChange={(schedule) => setSettings({ ...settings, ...schedule })} />
         <div className="settings-group">
           <div className="settings-group-heading"><h3>总结服务</h3><p>支持 OpenAI 兼容接口；留空 API Key 时使用本地规则摘要。</p></div>
           <div className="field-grid">

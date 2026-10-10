@@ -1,0 +1,51 @@
+name: Prepare release draft
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  installers:
+    uses: ./.github/workflows/package.yml
+    with:
+      release-tag: ${{ github.ref_name }}
+
+  draft:
+    name: Create draft only after both builds succeed
+    needs: installers
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Download only installer artifacts from this run
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: installers-*
+          merge-multiple: true
+          path: release-assets
+      - name: Verify all four installers and both checksum files
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: node scripts/release.cjs collect "$RELEASE_TAG" release-assets
+      - name: Create or refresh release draft (never publish)
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const prepareDraft = require('./.github/scripts/publish-release.cjs');
+            await prepareDraft({ github, context, core });

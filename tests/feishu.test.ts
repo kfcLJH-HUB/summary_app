@@ -19,6 +19,8 @@ const settings: AppSettings = {
   apiKey: "",
   model: "",
   summaryPrompt: "",
+  autoSummaryEnabled: true,
+  autoSummaryTime: "19:00",
   feishuEnabled: true,
   feishuAppId: "cli_test",
   feishuAppSecret: "secret_test",

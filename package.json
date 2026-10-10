@@ -2,19 +2,22 @@
   "name": "ai-session-summary",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
+  "author": "kfcLJH-HUB",
   "description": "A local AI session journal for Codex, Claude Code and Doubao.",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env ELECTRON_RENDERER_URL=http://127.0.0.1:5173 electron .\"",
     "build": "vite build && esbuild electron/main.ts electron/preload.ts electron/doubao-preload.ts electron/deepseek-preload.ts --bundle --platform=node --outdir=dist-electron --external:electron --format=cjs --sourcemap",
     "start": "electron .",
-    "package:mac": "npm run build && electron-builder --mac --arm64",
-    "package:mac:dir": "npm run build && electron-builder --mac --arm64 --dir",
-    "package:win": "npm run build && electron-builder --win --x64",
-    "package:win:dir": "npm run build && electron-builder --win --x64 --dir",
+    "package:mac": "npm run build && electron-builder --mac --arm64 --publish never",
+    "package:mac:dir": "npm run build && electron-builder --mac --arm64 --dir --publish never",
+    "package:win": "npm run build && electron-builder --win --x64 --publish never",
+    "package:win:dir": "npm run build && electron-builder --win --x64 --dir --publish never",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "vitest run && npm run test:release",
+    "test:watch": "vitest",
+    "test:release": "node --test scripts/release-checks.cjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.3.4",
@@ -43,7 +46,9 @@
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
-      "package.json"
+      "package.json",
+      "LICENSE",
+      "THIRD_PARTY_NOTICES.md"
     ],
     "mac": {
       "target": [
@@ -52,7 +57,7 @@
       ],
       "icon": "build/icon.png",
       "category": "public.app-category.productivity",
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
+      "artifactName": "AI-Session-Summary-${version}-${arch}.${ext}"
     },
     "dmg": {
       "title": "AI Session Summary ${version}",
@@ -78,10 +83,10 @@
         "zip"
       ],
       "icon": "build/icon.png",
-      "artifactName": "${productName}-${version}-win-${arch}.${ext}"
+      "artifactName": "AI-Session-Summary-${version}-win-${arch}.${ext}"
     },
     "nsis": {
-      "artifactName": "${productName}-${version}-win-${arch}-setup.${ext}",
+      "artifactName": "AI-Session-Summary-${version}-win-${arch}-setup.${ext}",
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
