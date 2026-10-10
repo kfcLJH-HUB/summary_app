@@ -25,9 +25,11 @@ export function shouldGenerateDailySummary(now: Date, schedule: SummarySchedule,
   return now.getHours() * 60 + now.getMinutes() >= hour * 60 + minute
 }
 
-export function summaryScheduleNote(schedule: SummarySchedule | null): string {
-  if (!schedule) return "每 5 分钟读取"
+export function summaryScheduleNote(schedule: SummarySchedule | null, autoReadEnabled: boolean | null = true): string {
+  if (autoReadEnabled === null) return "正在加载读取设置"
+  const reading = autoReadEnabled ? "每 5 分钟读取" : "会话手动读取"
+  if (!schedule) return reading
   return schedule.autoSummaryEnabled
-    ? `每 5 分钟读取，${schedule.autoSummaryTime} 自动生成`
-    : "每 5 分钟读取，日报手动生成"
+    ? `${reading}，${schedule.autoSummaryTime} 自动生成`
+    : `${reading}，日报手动生成`
 }

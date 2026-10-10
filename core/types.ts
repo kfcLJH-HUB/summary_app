@@ -46,6 +46,7 @@ export type AppSettings = {
   apiKey: string
   model: string
   summaryPrompt: string
+  autoReadEnabled: boolean
   autoSummaryEnabled: boolean
   autoSummaryTime: string
   feishuEnabled: boolean

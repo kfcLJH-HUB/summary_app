@@ -57,7 +57,9 @@
       ],
       "icon": "build/icon.png",
       "category": "public.app-category.productivity",
-      "artifactName": "AI-Session-Summary-${version}-${arch}.${ext}"
+      "artifactName": "AI-Session-Summary-${version}-${arch}.${ext}",
+      "identity": "-",
+      "notarize": false
     },
     "dmg": {
       "title": "AI Session Summary ${version}",

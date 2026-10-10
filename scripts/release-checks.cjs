@@ -213,3 +213,16 @@ test('duplicate drafts for the same tag require manual resolution', async t => {
   await assert.rejects(publish(input), /Multiple releases/);
   assert.equal(calls.length, 0);
 });
+
+test('macOS packaging uses explicit ad-hoc signing and never attempts notarization', () => {
+  const { mac } = require('../package.json').build;
+  assert.equal(mac.identity, '-');
+  assert.equal(mac.notarize, false);
+});
+
+test('macOS signature checks include nested code and fail closed', () => {
+  const calls = [];
+  utils.verifyMacSignature('/fixture/Test.app', (...args) => calls.push(args));
+  assert.deepEqual(calls[0].slice(0, 2), ['codesign', ['--verify', '--deep', '--strict', '--verbose=2', '/fixture/Test.app']]);
+  assert.throws(() => utils.verifyMacSignature('/fixture/Test.app', () => { throw new Error('invalid signature'); }), /invalid signature/);
+});

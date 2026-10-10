@@ -15,7 +15,9 @@
 
 成功后在该次运行的 **Artifacts** 下载压缩包，解压可见两个安装文件和一份 SHA256 清单。Actions artifact 是外层下载压缩包，不是应用本身的 ZIP。默认保留 14 天。
 
-工作流会检查应用可执行文件、`app.asar` 内版本号、MIT 许可证与第三方声明，以及安装文件非空。**这些是构建校验，不代表已在桌面环境完成安装和业务验收。**
+macOS 使用固定 `identity: "-"` 进行 ad-hoc 签名，不导入证书、不使用签名密钥，且明确关闭公证。PR 构建也仅执行这种本地签名。
+
+工作流会检查 macOS 深度代码签名、应用可执行文件、`app.asar` 内版本号、MIT 许可证与第三方声明，以及安装文件非空。**这些是构建校验，不代表已在桌面环境完成安装和业务验收。**
 
 本地打包也可用：
 
@@ -120,6 +122,6 @@ SHA256 用来检测文件损坏或与清单不一致，**不能代替开发者�
 ## 6. 尚未完成
 
 - 首次 GitHub 双平台构建、Release 草稿上传及 Windows 实机验收。
-- Apple Developer ID 签名与 notarization、Windows Authenticode 签名；当前流水线不会读取签名证书。
+- Apple Developer ID 签名与 notarization、Windows Authenticode 签名；当前只使用 ad-hoc 本地签名，流水线不会读取签名证书。
 - 品牌图标和应用图标的来源/授权确认，详见 [第三方声明](../THIRD_PARTY_NOTICES.md)。
 - 内置自动更新。本流程只提供下载安装包，不会自动更新用户设备上的应用。

@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
+const { execFileSync } = require('node:child_process');
 
 const platforms = ['macos-arm64', 'windows-x64'];
 
@@ -67,6 +68,11 @@ function verifyHost(platform) {
   assert.equal(process.arch, expected[1], 'Runner architecture does not match installer architecture');
 }
 
+function verifyMacSignature(appPath, run = execFileSync) {
+  // Fail packaging instead of uploading an app with Electron's stale signature.
+  run('codesign', ['--verify', '--deep', '--strict', '--verbose=2', appPath], { stdio: 'pipe' });
+}
+
 async function verifyPackage(root, version, platform) {
   const directory = path.join(root, 'release');
   const app = platform === 'macos-arm64'
@@ -76,6 +82,7 @@ async function verifyPackage(root, version, platform) {
     ? path.join(app, 'MacOS', 'AI Session Summary')
     : path.join(app, 'AI Session Summary.exe');
   assert(fs.statSync(executable).size > 0, 'Packaged application executable is missing');
+  if (platform === 'macos-arm64') verifyMacSignature(path.dirname(app));
   const asar = require('@electron/asar'); // Installed by electron-builder; not shipped with the app.
   const archive = path.join(app, platform === 'macos-arm64' ? 'Resources' : 'resources', 'app.asar');
   const pkg = JSON.parse(asar.extractFile(archive, 'package.json').toString());
@@ -118,10 +125,10 @@ function releaseNotes(version) {
 - [ ] 补充本版本变更；确认第三方资产来源与再分发权限。
 
 ### 注意
-安装包未使用 Apple Developer ID 签名/公证或 Windows Authenticode 签名，系统可能提示来源未验证。请只下载可信仓库的文件，不要关闭系统安全保护。
+Mac 安装包使用 ad-hoc 本地签名，但未使用 Apple Developer ID 签名/公证或 Windows Authenticode 签名，系统可能提示来源未验证。请只下载可信仓库的文件，不要关闭系统安全保护。
 API Key 仍以明文保存在本机配置；使用外部模型会将选定会话发送到所配置服务。
 支持范围为 Apple Silicon Mac 和 Windows x64；当前不提供 Intel Mac、Windows ARM 安装包。构建通过不代表实机验收完成。
 `;
 }
 
-module.exports = { platforms, packageVersion, validateVersion, validateTag, artifactNames, checksumName, manifest, verifyHost, verifyPackage, verifyDownloads, releaseNotes };
+module.exports = { platforms, packageVersion, validateVersion, validateTag, artifactNames, checksumName, manifest, verifyHost, verifyMacSignature, verifyPackage, verifyDownloads, releaseNotes };

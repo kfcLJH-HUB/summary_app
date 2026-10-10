@@ -58,8 +58,12 @@ jobs:
       - name: Run tests
         run: npm test
       - name: Build installers (never auto-publish)
+        # Ad-hoc signing only: identity is "-", certificate discovery and
+        # notarization are disabled, and this workflow receives no secrets.
+        env:
+          CSC_FOR_PULL_REQUEST: ${{ matrix.platform == 'macos-arm64' && 'true' || 'false' }}
         run: npm run ${{ matrix.command }}
-      - name: Verify executable, licenses, version and installer checksums
+      - name: Verify executable, macOS signature, licenses, version and checksums
         run: node scripts/release.cjs verify ${{ matrix.platform }}
       - name: Upload installers and checksums
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

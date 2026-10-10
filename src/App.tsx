@@ -4,6 +4,8 @@ import type { AppSettings, Conversation, DailySummary, Source } from "../core/ty
 import { normalizeConversations } from "../core/normalizer"
 import { normalizeSummarySchedule, shouldGenerateDailySummary, summaryScheduleNote } from "../core/summary-schedule"
 import type { SummarySchedule } from "../core/summary-schedule"
+import { normalizeAutoReadEnabled, startAutoReadTimer } from "../core/auto-read"
+import { AutoReadSettings } from "./components/AutoReadSettings"
 import { AutoSummarySettings } from "./components/AutoSummarySettings"
 import codexIcon from "./assets/codex.png"
 import claudeIcon from "./assets/claude.png"
@@ -12,7 +14,6 @@ import deepseekIcon from "./assets/deepseek.svg"
 
 const today = () => new Intl.DateTimeFormat("en-CA").format(new Date())
 const sourceName: Record<Source, string> = { codex: "Codex", "claude-code": "Claude Code", doubao: "豆包", deepseek: "DeepSeek" }
-const AUTO_REFRESH_INTERVAL = 5 * 60 * 1000
 const DAILY_SUMMARY_STORAGE_KEY = "ai-session-summary:last-auto-summary-date"
 const ENABLED_SOURCES_STORAGE_KEY = "ai-session-summary:enabled-sources"
 const DEFAULT_SOURCES: Source[] = ["codex", "claude-code"]
@@ -62,6 +63,7 @@ function App() {
   const [summary, setSummary] = useState<DailySummary | null>(null)
   const [settings, setSettings] = useState<AppSettings | null>(null)
   // Keep the active schedule separate from unsaved edits in the settings dialog.
+  const [savedAutoReadEnabled, setSavedAutoReadEnabled] = useState<boolean | null>(null)
   const [savedSchedule, setSavedSchedule] = useState<SummarySchedule | null>(null)
   const [loading, setLoading] = useState(false)
   const [sessionStatus, setSessionStatus] = useState("")
@@ -85,10 +87,6 @@ function App() {
 
   useEffect(() => {
     void loadSettings()
-    if (!initialReadStartedRef.current) {
-      initialReadStartedRef.current = true
-      void scanSessions(true)
-    }
     const removeDoubaoListener = window.summaryApi.onDoubaoVisibilityChanged((visible) => setEmbeddedSource(visible ? "doubao" : null))
     const removeDeepSeekListener = window.summaryApi.onDeepSeekVisibilityChanged((visible) => setEmbeddedSource(visible ? "deepseek" : null))
     return () => { removeDoubaoListener(); removeDeepSeekListener() }
@@ -99,12 +97,17 @@ function App() {
   }, [enabledSources])
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      if (loadingRef.current || embeddedSourceRef.current) return
+    if (savedAutoReadEnabled !== true) {
+      initialReadStartedRef.current = false
+      return
+    }
+    if (!initialReadStartedRef.current) {
+      initialReadStartedRef.current = true
       void scanSessions(true)
-    }, AUTO_REFRESH_INTERVAL)
-    return () => window.clearInterval(timer)
-  }, [date, enabledSources])
+    }
+    return startAutoReadTimer(savedAutoReadEnabled, () => { void scanSessions(true) },
+      () => loadingRef.current || Boolean(embeddedSourceRef.current))
+  }, [date, enabledSources, savedAutoReadEnabled])
 
   useEffect(() => {
     if (!savedSchedule?.autoSummaryEnabled) return
@@ -140,9 +143,15 @@ function App() {
 
   async function loadSettings() {
     if (!window.summaryApi) return
-    const loaded = await window.summaryApi.getSettings()
-    setSettings(loaded)
-    setSavedSchedule(normalizeSummarySchedule(loaded))
+    try {
+      const loaded = await window.summaryApi.getSettings()
+      const enabled = normalizeAutoReadEnabled(loaded)
+      setSettings({ ...loaded, autoReadEnabled: enabled })
+      setSavedAutoReadEnabled(enabled)
+      setSavedSchedule(normalizeSummarySchedule(loaded))
+    } catch {
+      setSessionStatus("读取设置失败，自动读取未启动；请重启应用或手动读取会话。")
+    }
   }
 
   async function scanSessions(automatic = false, targetDate = date, sources = enabledSources) {
@@ -151,7 +160,7 @@ function App() {
     setLoading(true)
     try {
       await closeEmbedded()
-      setSessionStatus(automatic ? "每 5 分钟自动读取会话中……" : "正在读取会话……")
+      setSessionStatus(automatic ? "正在自动读取会话……" : "正在读取会话……")
       const local = sources.some((source) => source === "codex" || source === "claude-code")
         ? await window.summaryApi.scanLocalSessions(targetDate)
         : []
@@ -343,8 +352,10 @@ function App() {
     if (!settings) return
     try {
       const schedule = normalizeSummarySchedule(settings)
-      await window.summaryApi.saveSettings({ ...settings, ...schedule })
-      setSettings({ ...settings, ...schedule })
+      const enabled = normalizeAutoReadEnabled(settings)
+      await window.summaryApi.saveSettings({ ...settings, ...schedule, autoReadEnabled: enabled })
+      setSettings({ ...settings, ...schedule, autoReadEnabled: enabled })
+      setSavedAutoReadEnabled(enabled)
       setSavedSchedule(schedule)
       setShowSettings(false); setSessionStatus("设置已保存")
     } catch (error) {
@@ -383,7 +394,7 @@ function App() {
           <div className="brand-mark" aria-hidden="true"><Sparkles size={16} /></div>
           <div className="page-heading-copy">
             <h1>{date === today() ? "今日会话" : `${date} 会话`}</h1>
-            <p>{date} · 自动读取已开启</p>
+            <p>{date} · {savedAutoReadEnabled === null ? "正在加载设置" : savedAutoReadEnabled ? "自动读取已开启" : "自动读取已关闭"}</p>
           </div>
         </div>
         <div className="toolbar">
@@ -437,7 +448,7 @@ function App() {
             <h2 id="sessions-title">会话记录</h2>
             {sessionStatus && <div className="session-status" title={sessionStatus}>{loading && <LoaderCircle className="spin" size={15} />}{sessionStatus}</div>}
           </div>
-          <span className="auto-refresh-note"><Clock3 size={13} />{summaryScheduleNote(savedSchedule)}</span>
+          <span className="auto-refresh-note"><Clock3 size={13} />{summaryScheduleNote(savedSchedule, savedAutoReadEnabled)}</span>
         </div>
         <div className="session-list">
           {conversations.map((conversation) => <button type="button" className={`session-row ${selected?.source === conversation.source && selected?.sessionId === conversation.sessionId ? "selected" : ""}`} key={`${conversation.source}-${conversation.sessionId}`} onClick={() => setSelected(conversation)} aria-pressed={selected?.source === conversation.source && selected?.sessionId === conversation.sessionId}>
@@ -473,6 +484,7 @@ function App() {
           <div><h2 id="settings-title">设置</h2><p>配置总结服务、日报格式和本地会话目录。</p></div>
           <button type="button" className="icon-button" title="关闭设置" aria-label="关闭设置" onClick={() => setShowSettings(false)}><X size={17} /></button>
         </div>
+        <AutoReadSettings enabled={settings.autoReadEnabled} onChange={(enabled) => setSettings({ ...settings, autoReadEnabled: enabled })} />
         <AutoSummarySettings schedule={settings} onChange={(schedule) => setSettings({ ...settings, ...schedule })} />
         <div className="settings-group">
           <div className="settings-group-heading"><h3>总结服务</h3><p>支持 OpenAI 兼容接口；留空 API Key 时使用本地规则摘要。</p></div>

@@ -12,6 +12,6 @@ export function AutoSummarySettings({ schedule, onChange }: {
         if (event.target.value) onChange({ ...schedule, autoSummaryTime: event.target.value })
       }} /></label>
     </div>
-    <span className="settings-hint">使用电脑的本地时间，保存设置后生效。应用须保持打开；错过时间后打开会补生成。当天没有会话时跳过，每天最多自动生成一次。</span>
+    <span className="settings-hint">使用电脑的本地时间，保存设置后生效。应用须保持打开；错过时间后打开会补生成。生成前会读取当天会话，不受“自动读取会话”开关影响；没有会话时跳过，每天最多自动生成一次。</span>
   </div>
 }

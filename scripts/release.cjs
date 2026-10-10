@@ -27,5 +27,6 @@ async function main() {
 
 main().catch(error => {
   console.error(error.message);
+  if (error.stderr) console.error(error.stderr.toString());
   process.exitCode = 1;
 });
